@@ -1,6 +1,6 @@
-"use strict";
+import { getPosts, createPost, deletePost, updatePost } from "./rest-service.js";
+import { compareTitle, compareBody, prepareData } from ".helpers.js";
 
-const endpoint = "https://post-rest-api-default-rtdb.firebaseio.com";
 // const endpoint = "";
 let posts;
 
@@ -26,7 +26,7 @@ function showCreatePostDialog() {
   document.querySelector("#dialog-create-post").showModal(); // show create dialog
 }
 
-function createPostClicked(event) {
+async function createPostClicked(event) {
   const form = event.target; // or "this"
   // extract the values from inputs from the form
   const title = form.title.value;
@@ -34,6 +34,12 @@ function createPostClicked(event) {
   const image = form.image.value;
   createPost(title, body, image); // use values to create a new post
   form.reset(); // reset the form (clears inputs)
+  const response = await createPost(title, body, image);
+  if (response.ok) {
+    console.log("Create New Post Clicked!");
+    form.reset();
+    updatePostsGrid();
+  }
 }
 
 function updatePostClicked(event) {
@@ -44,7 +50,11 @@ function updatePostClicked(event) {
   const image = form.image.value;
   // get id of the post to update - saved in data-id
   const id = form.getAttribute("data-id");
-  updatePost(id, title, body, image); // call updatePost with arguments
+  // updatePost(id, title, body, image); // call updatePost with arguments
+  if (response.ok) {
+    console.log("Update Post Clicked!");
+    updatePostsGrid();
+  }
 }
 
 function deletePostClicked(event) {
@@ -81,14 +91,6 @@ async function updatePostsGrid() {
   showPosts(posts); // show all posts (append to the DOM) with posts as argument
 }
 
-// Get all posts - HTTP Method: GET
-async function getPosts() {
-  const response = await fetch(`${endpoint}/posts.json`); // fetch request, (GET)
-  const data = await response.json(); // parse JSON to JavaScript
-  const posts = prepareData(data); // convert object of object to array of objects
-  return posts; // return posts
-}
-
 function showPosts(listOfPosts) {
   document.querySelector("#posts").innerHTML = ""; // reset the content of section#posts
 
@@ -112,8 +114,8 @@ function showPost(postObject) {
   document.querySelector("#posts").insertAdjacentHTML("beforeend", html); // append html to the DOM - section#posts
 
   // add event listeners to .btn-delete and .btn-update
-  document.querySelector("#posts article:last-child .btn-delete").addEventListener("click", deleteClicked);
-  document.querySelector("#posts article:last-child .btn-update").addEventListener("click", updateClicked);
+  document.querySelector("#posts article:last-child .btn-delete").addEventListener("click", () => deleteClicked(postObject));
+  document.querySelector("#posts article:last-child .btn-update").addEventListener("click", () => updateClicked(postObject));
 
   // called when delete button is clicked
   function deleteClicked() {
@@ -137,81 +139,19 @@ function showPost(postObject) {
 }
 
 function searchPosts(searchValue) {
-  searchValue = searchValue.toLowerCase();
-
-  const results = posts.filter(checkTitle);
-
-  function checkTitle(post) {
-    const title = post.title.toLowerCase();
-    return title.includes(searchValue);
-  }
-
-  return results;
+  return posts.filter((post) => post.title.toLowerCase().includes(searchValue.toLowerCase()));
 }
 
-// Create a new post - HTTP Method: POST
-async function createPost(title, body, image) {
-  const newPost = { title, body, image }; // create new post object
-  const json = JSON.stringify(newPost); // convert the JS object to JSON string
-  // POST fetch request with JSON in the body
-  const response = await fetch(`${endpoint}/posts.json`, {
-    method: "POST",
-    body: json,
-  });
-  // check if response is ok - if the response is successful
-  if (response.ok) {
-    console.log("New post succesfully added to Firebase 🔥");
-    updatePostsGrid(); // update the post grid to display all posts and the new post
-  }
-}
-
-// Update an existing post - HTTP Method: DELETE
-async function deletePost(id) {
-  const response = await fetch(`${endpoint}/posts/${id}.json`, {
-    method: "DELETE",
-  });
-  if (response.ok) {
-    console.log("New post succesfully deleted from Firebase 🔥");
-    updatePostsGrid(); // update the post grid to display all posts and the new post
-  }
-}
-
-// Delete an existing post - HTTP Method: PUT
-async function updatePost(id, title, body, image) {
-  const postToUpdate = { title, body, image }; // post update to update
-  const json = JSON.stringify(postToUpdate); // convert the JS object to JSON string
-  // PUT fetch request with JSON in the body. Calls the specific element in resource
-  const response = await fetch(`${endpoint}/posts/${id}.json`, {
-    method: "PUT",
-    body: json,
-  });
-  // check if response is ok - if the response is successful
-
-  if (response.ok) {
-    console.log("Post succesfully updated in Firebase 🔥");
-    updatePostsGrid(); // update the post grid to display all posts and the new post
-  }
-}
+// ================Chat GPT=====================
+// const searchPosts = (searchValue) => {
+//   searchValue = searchValue.toLowerCase();
+//   const results = posts.filter((post) => {
+//     const title = post.title.toLowerCase();
+//     return title.includes(searchValue);
+//   });
+//   return results;
+// };
 
 // ============== helper function ============== //
 
-// convert object of objects til an array of objects
-function prepareData(dataObject) {
-  const array = []; // define empty array
-  // loop through every key in dataObject
-  // the value of every key is an object
-  for (const key in dataObject) {
-    const object = dataObject[key]; // define object
-    object.id = key; // add the key in the prop id
-    array.push(object); // add the object to array
-  }
-  return array; // return array back to "the caller"
-}
-
-function compareTitle(post1, post2) {
-  return post1.title.localeCompare(post2.title);
-}
-
-function compareBody(post1, post2) {
-  return post1.body.localeCompare(post2.body);
-}
+export { prepareData };
